@@ -32,7 +32,7 @@ The dataset contains socioeconomic indicators for Indonesian regions in 2021, in
 ## 🛠️ Technologies Used
 
 ### R Environment
-- **R** (version 4.x recommended)
+- **R** (version 4.4.1 recommended)
 - **RStudio** or R Markdown environment
 
 ### Required R Packages
@@ -66,8 +66,8 @@ library(naniar)
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/indonesian-hdi-analysis.git
-cd indonesian-hdi-analysis
+git clone https://github.com/Josshua-DSA/IPM-Analysis-Rstudio.git
+cd IPM-Analysis-Rstudio
 ```
 
 2. Install required R packages:
@@ -168,13 +168,9 @@ The analysis generates various visualizations:
 4. Push to the branch (`git push origin feature/analysis-improvement`)
 5. Create a Pull Request
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 👥 Authors
 
-- **Your Name** - *Initial work* - [YourGitHub](https://github.com/yourusername)
+- **Joshua Remedeial Syeba** - *Student* - [Josshua-DSA](https://github.com/Josshua-DSA)
 
 ## 🙏 Acknowledgments
 
@@ -186,7 +182,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 - Open an issue on GitHub
-- Contact: your.email@example.com
+- Contact: joshuasyeba@gmail.com
 
 ## 📚 References
 
