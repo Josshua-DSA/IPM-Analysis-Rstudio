@@ -1,5 +1,4 @@
 # IPM Analysis Rstudio
-# Indonesian Human Development Index (HDI) Statistical Analysis
 
 A comprehensive statistical analysis project examining the factors influencing life expectancy in Indonesia using multiple regression techniques including OLS, Best Subset Regression, and Stepwise Selection.
 
