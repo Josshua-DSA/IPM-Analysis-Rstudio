@@ -1,0 +1,306 @@
+---
+title: "PA Script OLS(Subset&Stepwise) include"
+output: html_notebook
+---
+
+1. Sesi Import
+```{r}
+#import ing
+install.packages("ggplot2")
+library(ggplot2)
+install.packages("GGally")
+library(GGally)
+setwd("D:/PENS-EEPIS/SDT A Semester 2 2025/Pemodelan Statistika Terapan/PA")
+getwd()
+```
+2. Ekstrak Data
+```{r}
+ipm <- read.csv("ipm-indonesia2021-cluster.csv")
+head(ipm)
+View(ipm)
+```
+3. Data Preprocessing
+```{r}
+#3.1 ubah nama atribut
+install.packages("dplyr")
+library(dplyr)
+ipm <- ipm %>%
+  rename(
+          perc_Po   ='Persentase.Penduduk.Miskin..P0..Menurut.Kabupaten.Kota..Persen.',
+          # Persentase Penduduk miskin
+          avgschool ='Rata.rata.Lama.Sekolah.Penduduk.15...Tahun.',  
+          # Rata-rata 15+ tahun
+          spendpercap ='Pengeluaran.per.Kapita.Disesuaikan..Ribu.Rupiah.Orang.Tahun.',
+          # Pengeluaran/ kapita (Ribu/orang/tahun)
+          ipm ='Indeks.Pembangunan.Manusia',
+          life_exp='Umur.Harapan.Hidup..Tahun.',
+          # dalam 1 tahun
+          perc_san='Persentase.rumah.tangga.yang.memiliki.akses.terhadap.sanitasi.layak',
+          # persentase sanitasi layak
+          perc_dr='Persentase.rumah.tangga.yang.memiliki.akses.terhadap.air.minum.layak',
+          # persentase air minum layak
+          unemploy='Tingkat.Pengangguran.Terbuka',
+          # dalam 1 tahun
+          labor_part='Tingkat.Partisipasi.Angkatan.Kerja',
+          # dalam 1 tahun
+          pdrb='PDRB.atas.Dasar.Harga.Konstan.menurut.Pengeluaran..Rupiah.')
+          #lengkapnya(Ribu Rupiah)
+ipm <- ipm %>% dplyr::select(-Provinsi, -Kab.Kota)
+summary(ipm)
+```
+
+```{r}
+str(ipm)
+```
+
+3.2 Missing Value Handling
+```{r}
+#Mengatasi Missing Value
+sum(is.na(ipm))
+colSums(is.na(ipm))
+colMeans(is.na(ipm))
+ipm[!complete.cases(ipm), ]
+
+#Visualisasi Nan
+install.packages("naniar")
+library(naniar)
+vis_miss(ipm)
+```
+
+```{r}
+#menghapus semua yang kosong
+ipm_cleaned <- na.omit(ipm)
+sum(is.na(ipm_cleaned))
+colSums(is.na(ipm_cleaned))
+colMeans(is.na(ipm_cleaned))
+```
+
+
+3.3 EDA with Cleaned dataset
+3.3.1 EDA (Scatter Plot)
+```{r}
+#Cek Persebaran Data
+pairs(~ipm_cleaned$perc_Po+ipm_cleaned$avgschool+ipm_cleaned$spendpercap+ipm_cleaned$ipm+ipm_cleaned$life_exp+ipm_cleaned$perc_san+ipm_cleaned$perc_dr+ipm_cleaned$unemploy+ipm_cleaned$labor_part+ipm_cleaned$pdrb, data = ipm_cleaned, main = "Scatterplot Matrix")
+
+```
+3.3.2 EDA ( Correlation Data )
+```{r}
+#visualisasi Korelasi
+install.packages("corrplot")
+library(corrplot)
+cor_matrix <- cor(ipm_cleaned)
+corrplot(cor_matrix, method = "color", type = "upper", tl.col = "black", addCoef.col = "black")
+# Plot heatmap korelasi
+heatmap(cor(ipm_cleaned), col = colorRampPalette(c("red", "white", "blue"))(100))
+```
+
+3.3.3 EDA (Distribusi data)
+```{r}
+# Buat plot matriks dengan GGally
+# distribusi perc_Po
+plot(density(ipm_cleaned$perc_Po), main = "Density Plot Persentase Penduduk miskin", xlab = "Persentase Penduduk Miskin (P0) Menurut Kabupaten Kota (Persen)", col = "darkblue")
+# avgschool
+plot(density(ipm_cleaned$avgschool), main = "Density Plot Rata lulusan", xlab = "Rata.rata.Lama.Sekolah.Penduduk.15...Tahun.", col = "blue")
+# spendpercap
+plot(density(ipm_cleaned$spendpercap), main = "Density Plot Pengeluaran", xlab = "Pengeluaran.per.Kapita.Disesuaikan..Ribu.Rupiah.Orang.Tahun", col = "yellow")
+# ipm
+plot(density(ipm_cleaned$ipm), main = "Density Plot ipm", xlab = "Index Pembangunan Manusia", col = "red")
+# life_exp
+plot(density(ipm_cleaned$life_exp), main = "Density life_exp", xlab = "Umur Harapan Hidup(Tahun)", col = "black")
+# perc_san
+plot(density(ipm_cleaned$perc_san), main = "Density Plot perc_san", xlab = "Persentase.rumah.tangga.yang.memiliki.akses.terhadap.sanitasi.layak", col = "gray")
+# perc_dr
+plot(density(ipm_cleaned$perc_dr), main = "Density Plot perc_dr", xlab = "Persentase rumah tangga yang memiliki akses terhadap air minum layak", col = "pink")
+# unemploy 
+plot(density(ipm_cleaned$unemploy), main = "Density Plot unemploy", xlab = "Tingkat Pengangguran Terbuka", col = "green")
+# labor part
+plot(density(ipm_cleaned$labor_part), main = "Density Plot labor_part", xlab = "TingkatP artisipasi Angkatan Kerja", col = "darkgreen")
+# pdrb
+plot(density(ipm_cleaned$pdrb), main = "Density Plot pdrb", xlab = "PDRB atas Dasar Harga Konstan menurut Pengeluaran(Ribu Rupiah)", col = "brown")
+```
+3.3.4 EDA (Boxplot)
+```{r}
+## Membuat boxplot dari 10 variabel tadi
+install.packages("tidyr")
+library(tidyr)
+# Ubah ke long format
+ipm_long <- pivot_longer(ipm_cleaned, 
+                         cols = everything(), 
+                         names_to = "Variable", 
+                         values_to = "Value")
+# Buat boxplot
+ggplot(ipm_long, aes(x = Variable, y = Value, fill = Variable)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Set3") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(fill = FALSE)
+
+# Boxplot per variabel terpisah
+par(mfrow = c(1,4))  # Sesuaikan jumlah baris/kolom sesuai jumlah variabel
+for (col in names(ipm_cleaned)) {
+  boxplot(ipm_cleaned[[col]], main = col)
+}
+```
+
+
+3.4 Normalisasi Data
+```{r}
+# Rumus IQR Capping
+cap_outliers <- function(x) {
+  q1 <- quantile(x, 0.25)
+  q3 <- quantile(x, 0.75)
+  iqr <- q3 - q1
+  lower <- q1 - 1.5 * iqr
+  upper <- q3 + 1.5 * iqr
+  x[x < lower] <- lower
+  x[x > upper] <- upper
+  return(x)
+}
+
+#1. handle outlier pada variabel 'perc_Po'
+ipm_cleaned$perc_Po_capped <- cap_outliers(ipm_cleaned$perc_Po)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$perc_Po, main = "perc_Po Sebelum")
+boxplot(ipm_cleaned$perc_Po_capped, main = "perc_Po Sesudah")
+
+#2. handle outlier pada variabel 'spendpercap'
+ipm_cleaned$spendpercap_capped <- cap_outliers(ipm_cleaned$spendpercap)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$spendpercap, main = "spendpercap Sebelum")
+boxplot(ipm_cleaned$spendpercap_capped, main = "spendpercap Sesudah")
+
+#3. handle outlier pada variabel 'ipm'
+ipm_cleaned$ipm_capped <- cap_outliers(ipm_cleaned$ipm)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$ipm, main = "ipm Sebelum")
+boxplot(ipm_cleaned$ipm_capped, main = "ipm Sesudah")
+
+#4. handle outlier pada variabel 'perc_san'
+ipm_cleaned$perc_san_capped <- cap_outliers(ipm_cleaned$perc_san)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$perc_san, main = "perc_san Sebelum")
+boxplot(ipm_cleaned$perc_san_capped, main = "perc_san Sesudah")
+
+#5. handle outlier pada variabel 'perc_dr'
+ipm_cleaned$perc_dr_capped <- cap_outliers(ipm_cleaned$perc_dr)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$perc_Po, main = "perc_dr Sebelum")
+boxplot(ipm_cleaned$perc_Po_capped, main = "perc_dr Sesudah")
+
+#6. handle outlier pada variabel 'labor_part'
+ipm_cleaned$labor_part_capped <- cap_outliers(ipm_cleaned$labor_part)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$perc_Po, main = "labor_part Sebelum")
+boxplot(ipm_cleaned$perc_Po_capped, main = "labor_part Sesudah")
+
+#7  . handle outlier pada variabel 'pdrb'
+ipm_cleaned$pdrb_capped <- cap_outliers(ipm_cleaned$pdrb)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$pdrb, main = "pdrb Sebelum")
+boxplot(ipm_cleaned$pdrb_capped, main = "pdrb Sesudah")
+
+#8. handle outlier pada variabel 'labor_part'
+ipm_cleaned$labor_part_capped <- cap_outliers(ipm_cleaned$labor_part)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$labor_part, main = "labor_part Sebelum")
+boxplot(ipm_cleaned$labor_part_capped, main = "labor_part Sesudah")
+
+#9. handle outlier pada variabel ''unemploy
+ipm_cleaned$unemploy_capped <- cap_outliers(ipm_cleaned$unemploy)
+# Lihat boxplot sebelum dan sesudah
+par(mfrow = c(1, 2))
+boxplot(ipm_cleaned$unemploy, main = "unemploy Sebelum")
+boxplot(ipm_cleaned$unemploy_capped, main = "unemploy Sesudah")
+
+
+```
+
+3.5 Inisial ulang data
+```{r}
+head(ipm_cleaned)
+#inisialisasi data 
+data <- ipm_cleaned
+str(data)
+```
+Analisis:
+
+4. OLS
+```{r}
+# Modeling regresi
+model_ori = lm(data$life_exp~data$perc_Po+data$avgschool+data$spendpercap+data$ipm+data$unemploy+data$perc_san+data$perc_dr+data$labor_part+data$pdrb, data = data)
+summary(model_ori)
+model_cap = lm(data$life_exp~data$perc_Po_capped+data$avgschool+data$spendpercap_capped+data$ipm_capped+data$unemploy_capped+data$perc_san_capped+data$perc_dr_capped+data$labor_part_capped+data$pdrb_capped, data = data)
+print(summary(model_cap))
+```
+
+```{r}
+install.packages("car")
+library(car)
+vif(model_ori)
+```
+
+```{r}
+vif(model_cap)
+```
+
+5. Best Subset Regression
+```{r}
+# Mencari model yang terbaik
+#Import library
+install.packages("tidyverse")
+library(tidyverse)
+install.packages("caret")
+library(caret)
+install.packages("leaps")
+library(leaps)
+#Mencari Model
+best.subset = regsubsets(data$life_exp ~ data$perc_Po_capped+data$avgschool+data$spendpercap_capped+data$ipm_capped+data$unemploy_capped+data$perc_san_capped+data$perc_dr_capped+data$labor_part_capped+data$pdrb_capped, data = data , nvmax = 9)
+print(summary(best.subset))
+```
+Analisis:
+
+```{r}
+#Evaluasi
+res.sum <- summary(best.subset)
+data.frame(
+  Adj.R2 = which.max(res.sum$adjr2),
+  CP = which.min(res.sum$cp),
+  BIC = which.min(res.sum$bic),
+  RSS = which.min(res.sum$rss),
+  RSQ = which.min(res.sum$rsq)
+  )
+```
+
+
+6. Stepwise Selection
+```{r}
+# Menentukan Model
+install.packages("MASS")
+library(MASS)
+# Fit the full model
+model <-lm(data$life_exp ~ data$perc_Po_capped+data$avgschool+data$spendpercap_capped+data$ipm_capped+data$unemploy_capped+data$perc_san_capped+data$perc_dr_capped+data$labor_part_capped+data$pdrb_capped, data = data)
+
+```
+
+```{r}
+#Backward
+lm.all <- lm(data$life_exp ~ data$perc_Po_capped+data$avgschool+data$spendpercap_capped+data$ipm_capped+data$unemploy_capped+data$perc_san_capped+data$perc_dr_capped+data$labor_part_capped+data$pdrb_capped, data)
+stepwise_back <- step(lm.all, direction="backward")
+summary (stepwise_back)
+```
+Analisis: fitur yang dihapus hanya perc_dr karena tidak memberikan kontribusi besar terhadap penurunan RSS atau peningkatan AIC.
+
+```{r}
+#Forward
+lm.all <- lm(data$life_exp ~ data$perc_Po_capped+data$avgschool+data$spendpercap_capped+data$ipm_capped+data$unemploy_capped+data$perc_san_capped+data$perc_dr_capped+data$labor_part_capped+data$pdrb_capped, data)
+stepwise_for <- step(lm.all, direction="forward")
+```
